@@ -8,38 +8,30 @@ class OperationsForAll(object):
     @classmethod
     def go_to_next(cls, instance):
         """ Assumes instance is a QuerySet for a resource category """
-        if instance.counter < instance.max_resources():
+        if instance.counter < instance.dispatcher('max_resources'):
             instance.counter += 1
             return cls.resource_class.get(instance.counter)
         raise StopIteration()
 
+
 class OperationsForPeople(OperationsForAll):
 
     @classmethod
-    def get_resource_from_api(cls, resource_id):
-        return api_client.get_people(resource_id)
-        
-    @classmethod    
-    def create_query_set(cls):
-        return PeopleQuerySet()
-        
-    @classmethod
-    def max_resources(cls):
-        return api_client.get_people()['count']
+    def dispatcher(cls, fun, *params):
+        funs = { 'get_resource_from_api': lambda xs: api_client.get_people(xs[0]),
+                 'create_query_set': lambda xs: PeopleQuerySet(),
+                 'max_resources': lambda xs: api_client.get_people()['count'] }
+        return funs[fun](params)
+
 
 class OperationsForFilms(OperationsForAll):
+    @classmethod
+    def dispatcher(cls, fun, *params):
+        funs = { 'get_resource_from_api': lambda xs: api_client.get_films(xs[0]),
+                 'create_query_set': lambda xs: FilmsQuerySet(),
+                 'max_resources': lambda xs: api_client.get_films()['count'] }
+        return funs[fun](params)
 
-    @classmethod    
-    def get_resource_from_api(cls, resource_id):
-        return api_client.get_films(resource_id)
-        
-    @classmethod
-    def create_query_set(cls):
-        return FilmsQuerySet()
-    
-    @classmethod
-    def max_resources(cls):
-        return api_client.get_films()['count']
 
 class BaseModel(object):
 
@@ -57,7 +49,8 @@ class BaseModel(object):
         Returns an object of current Model requesting data to SWAPI using
         the api_client.
         """
-        return cls(cls.get_resource_from_api(resource_id))
+        # return cls(cls.get_resource_from_api(resource_id))
+        return cls(cls.dispatcher('get_resource_from_api', resource_id))
 
     @classmethod
     def all(cls):
@@ -66,7 +59,8 @@ class BaseModel(object):
         later in charge of performing requests to SWAPI for each of the
         pages while looping.
         """
-        return cls.create_query_set()
+        # return cls.create_query_set()
+        return cls.dispatcher('create_query_set')
 
 
 class People(BaseModel, OperationsForPeople):
