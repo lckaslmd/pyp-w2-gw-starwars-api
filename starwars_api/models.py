@@ -4,6 +4,42 @@ from starwars_api.exceptions import SWAPIClientError
 api_client = SWAPIClient()
 
 
+class AbstractResourcesOperations(object):
+    
+    @classmethod
+    def go_to_next(cls, instance):
+        if isinstance(instance, cls):
+            while instance.counter < instance.max_resources():
+                instance.counter += 1
+                return cls.resource_class.get(instance.counter)
+        raise StopIteration()
+
+class OperationsForPeople(AbstractResourcesOperations):
+    @classmethod
+    def get_resource_from_api(cls, resource_id):
+        return api_client.get_people(resource_id)
+        
+    @classmethod    
+    def create_query_set(cls):
+        return PeopleQuerySet()
+        
+    @classmethod
+    def max_resources(cls):
+        return api_client.get_people()['count']
+
+class OperationsForFilms(AbstractResourcesOperations):
+    @classmethod    
+    def get_resource_from_api(cls, resource_id):
+        return api_client.get_films(resource_id)
+        
+    @classmethod
+    def create_query_set(cls):
+        return FilmsQuerySet()
+    
+    @classmethod
+    def max_resources(cls):
+        return api_client.get_films()['count']
+
 class BaseModel(object):
 
     def __init__(self, json_data):
@@ -11,10 +47,8 @@ class BaseModel(object):
         Dynamically assign all attributes in `json_data` as instance
         attributes of the Model.
         """
-        
         for key, value in json_data.items():
             setattr(self, key, value)
-
 
     @classmethod
     def get(cls, resource_id):
@@ -22,12 +56,7 @@ class BaseModel(object):
         Returns an object of current Model requesting data to SWAPI using
         the api_client.
         """
-        if cls.RESOURCE_NAME is 'people':
-            return People(api_client.get_people(resource_id))
-        elif cls.RESOURCE_NAME is 'films':
-            return Films(api_client.get_films(resource_id))
-        else:
-            return None
+        return cls(cls.get_resource_from_api(resource_id))
 
     @classmethod
     def all(cls):
@@ -36,18 +65,12 @@ class BaseModel(object):
         later in charge of performing requests to SWAPI for each of the
         pages while looping.
         """
-        if cls.RESOURCE_NAME is 'people':
-            return PeopleQuerySet()
-        elif cls.RESOURCE_NAME is 'films':
-            return FilmsQuerySet()
-        else:
-            return None
+        return cls.create_query_set()
 
 
-class People(BaseModel):
+class People(BaseModel, OperationsForPeople):
     """Representing a single person"""
-    RESOURCE_NAME = 'people'
-
+    
     def __init__(self, json_data):
         super(People, self).__init__(json_data)
 
@@ -55,18 +78,16 @@ class People(BaseModel):
         return 'Person: {0}'.format(self.name)
 
 
-class Films(BaseModel):
-    RESOURCE_NAME = 'films'
-
+class Films(BaseModel, OperationsForFilms):
     def __init__(self, json_data):
         super(Films, self).__init__(json_data)
-
+        
     def __repr__(self):
         return 'Film: {0}'.format(self.title)
 
 
 class BaseQuerySet(object):
-
+    
     def __init__(self):
         self.counter = 0
             
@@ -75,15 +96,7 @@ class BaseQuerySet(object):
         return self
 
     def __next__(self):
-        if isinstance(self, PeopleQuerySet):
-            while self.counter < api_client.get_people()['count']:
-                self.counter += 1
-                return People.get(self.counter)
-        elif isinstance(self, FilmsQuerySet):
-            while self.counter < api_client.get_films()['count']:
-                self.counter += 1
-                return Films.get(self.counter)
-        raise StopIteration()
+        return self.__class__.go_to_next(self)
 
     next = __next__
 
@@ -96,8 +109,8 @@ class BaseQuerySet(object):
         return len([resource for resource in self])
 
 
-class PeopleQuerySet(BaseQuerySet):
-    RESOURCE_NAME = 'people'
+class PeopleQuerySet(BaseQuerySet, OperationsForPeople):
+    resource_class = People
 
     def __init__(self):
         super(PeopleQuerySet, self).__init__()
@@ -106,9 +119,9 @@ class PeopleQuerySet(BaseQuerySet):
         return 'PeopleQuerySet: {0} objects'.format(str(len(self.objects)))
 
 
-class FilmsQuerySet(BaseQuerySet):
-    RESOURCE_NAME = 'films'
-
+class FilmsQuerySet(BaseQuerySet, OperationsForFilms):
+    resource_class = Films
+    
     def __init__(self):
         super(FilmsQuerySet, self).__init__()
 
