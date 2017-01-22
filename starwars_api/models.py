@@ -8,7 +8,7 @@ class OperationsForAll(object):
     @classmethod
     def go_to_next(cls, instance):
         """ Assumes instance is a QuerySet for a resource category """
-        if isinstance(instance, cls) and instance.counter < instance.max_resources():
+        if instance.counter < instance.max_resources():
             instance.counter += 1
             return cls.resource_class.get(instance.counter)
         raise StopIteration()
