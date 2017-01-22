@@ -13,12 +13,9 @@ class BaseModel(object):
         """
         
         for key, value in json_data.items():
-            if key is 'results':
-                for r_key, r_value in value[0].items():
-                    setattr(self, r_key, r_value)
             setattr(self, key, value)
 
-        
+
     @classmethod
     def get(cls, resource_id):
         """
@@ -71,28 +68,21 @@ class Films(BaseModel):
 class BaseQuerySet(object):
 
     def __init__(self):
-        self.current = None
         self.counter = 1
             
     def __iter__(self):
         self.counter = 1
-        if isinstance(self, PeopleQuerySet):
-            self.current = People(api_client.get_people(self.counter))
-        elif isinstance(self, FilmsQuerySet):
-            self.current = Films(api_client.get_films(self.counter))
         return self
 
     def __next__(self):
         if isinstance(self, PeopleQuerySet):
             while self.counter <= api_client.get_people()['count']:
-                self.current = People.get(self.counter)
                 self.counter += 1
-                return self.current
+                return People.get(self.counter - 1)
         elif isinstance(self, FilmsQuerySet):
             while self.counter <= api_client.get_films()['count']:
-                self.current = Films.get(self.counter)
                 self.counter += 1
-                return self.current
+                return Films.get(self.counter - 1)
         raise StopIteration()
 
     next = __next__
