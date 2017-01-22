@@ -68,21 +68,21 @@ class Films(BaseModel):
 class BaseQuerySet(object):
 
     def __init__(self):
-        self.counter = 1
+        self.counter = 0
             
     def __iter__(self):
-        self.counter = 1
+        self.counter = 0
         return self
 
     def __next__(self):
         if isinstance(self, PeopleQuerySet):
-            while self.counter <= api_client.get_people()['count']:
+            while self.counter < api_client.get_people()['count']:
                 self.counter += 1
-                return People.get(self.counter - 1)
+                return People.get(self.counter)
         elif isinstance(self, FilmsQuerySet):
-            while self.counter <= api_client.get_films()['count']:
+            while self.counter < api_client.get_films()['count']:
                 self.counter += 1
-                return Films.get(self.counter - 1)
+                return Films.get(self.counter)
         raise StopIteration()
 
     next = __next__
