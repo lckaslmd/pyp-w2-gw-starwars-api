@@ -3,37 +3,6 @@ from starwars_api.exceptions import SWAPIClientError
 
 api_client = SWAPIClient()
 
-class OperationsForAll(object):
-
-    @classmethod
-    def go_to_next(cls, instance):
-        """ Assumes instance is a QuerySet for a resource category """
-        if instance.counter < instance.dispatcher('max_resources'):
-            instance.counter += 1
-            return cls.resource_class.get(instance.counter)
-        raise StopIteration()
-
-
-class OperationsForPeople(OperationsForAll):
-
-    @classmethod
-    def dispatcher(cls, fun, *params):
-        funs = { 'get_resource_from_api': lambda xs: api_client.get_people(xs[0]),
-                 'create_query_set':      lambda xs: PeopleQuerySet(),
-                 'max_resources':         lambda xs: api_client.get_people()['count'] }
-        return funs[fun](params)
-
-
-class OperationsForFilms(OperationsForAll):
-
-    @classmethod
-    def dispatcher(cls, fun, *params):
-        funs = { 'get_resource_from_api': lambda xs: api_client.get_films(xs[0]),
-                 'create_query_set':      lambda xs: FilmsQuerySet(),
-                 'max_resources':         lambda xs: api_client.get_films()['count'] }
-        return funs[fun](params)
-
-
 class BaseModel(object):
 
     def __init__(self, json_data):
@@ -50,7 +19,7 @@ class BaseModel(object):
         Returns an object of current Model requesting data to SWAPI using
         the api_client.
         """
-        return cls(cls.dispatcher('get_resource_from_api', resource_id))
+        return cls(cls.dispatcher('get_resource_from_api')(resource_id))
 
     @classmethod
     def all(cls):
@@ -59,7 +28,27 @@ class BaseModel(object):
         later in charge of performing requests to SWAPI for each of the
         pages while looping.
         """
-        return cls.dispatcher('create_query_set')
+        return cls.dispatcher('create_query_set')()
+
+
+class OperationsForPeople(object):
+
+    @classmethod
+    def dispatcher(cls, fun):
+        return { 'get_resource_from_api': lambda x: api_client.get_people(x),
+                 'create_query_set':      lambda: PeopleQuerySet(),
+                 'max_resources':         lambda: api_client.get_people()['count'],
+               }[fun]
+
+
+class OperationsForFilms(object):
+
+    @classmethod
+    def dispatcher(cls, fun):
+        return { 'get_resource_from_api': lambda x: api_client.get_films(x),
+                 'create_query_set':      lambda: FilmsQuerySet(),
+                 'max_resources':         lambda: api_client.get_films()['count'],
+               }[fun]
 
 
 class People(BaseModel, OperationsForPeople):
@@ -91,7 +80,10 @@ class BaseQuerySet(object):
         return self
 
     def __next__(self):
-        return self.__class__.go_to_next(self)
+        if self.counter < self.dispatcher('max_resources')():
+            self.counter += 1
+            return self.__class__.resource_class.get(self.counter)
+        raise StopIteration()
 
     next = __next__
 
