@@ -50,7 +50,6 @@ class BaseModel(object):
         Returns an object of current Model requesting data to SWAPI using
         the api_client.
         """
-        # return cls(cls.get_resource_from_api(resource_id))
         return cls(cls.dispatcher('get_resource_from_api', resource_id))
 
     @classmethod
@@ -60,7 +59,6 @@ class BaseModel(object):
         later in charge of performing requests to SWAPI for each of the
         pages while looping.
         """
-        # return cls.create_query_set()
         return cls.dispatcher('create_query_set')
 
 
