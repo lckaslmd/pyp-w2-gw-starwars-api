@@ -19,17 +19,18 @@ class OperationsForPeople(OperationsForAll):
     @classmethod
     def dispatcher(cls, fun, *params):
         funs = { 'get_resource_from_api': lambda xs: api_client.get_people(xs[0]),
-                 'create_query_set': lambda xs: PeopleQuerySet(),
-                 'max_resources': lambda xs: api_client.get_people()['count'] }
+                 'create_query_set':      lambda xs: PeopleQuerySet(),
+                 'max_resources':         lambda xs: api_client.get_people()['count'] }
         return funs[fun](params)
 
 
 class OperationsForFilms(OperationsForAll):
+
     @classmethod
     def dispatcher(cls, fun, *params):
         funs = { 'get_resource_from_api': lambda xs: api_client.get_films(xs[0]),
-                 'create_query_set': lambda xs: FilmsQuerySet(),
-                 'max_resources': lambda xs: api_client.get_films()['count'] }
+                 'create_query_set':      lambda xs: FilmsQuerySet(),
+                 'max_resources':         lambda xs: api_client.get_films()['count'] }
         return funs[fun](params)
 
 
@@ -112,7 +113,10 @@ class PeopleQuerySet(BaseQuerySet, OperationsForPeople):
         super(PeopleQuerySet, self).__init__()
 
     def __repr__(self):
-        return 'PeopleQuerySet: {0} objects'.format(str(len(self.objects)))
+        return 'PeopleQuerySet: {0} objects'.format(str(len(self)))
+        
+    def __len__(self):
+        return self.count()        
 
 
 class FilmsQuerySet(BaseQuerySet, OperationsForFilms):
@@ -122,4 +126,7 @@ class FilmsQuerySet(BaseQuerySet, OperationsForFilms):
         super(FilmsQuerySet, self).__init__()
 
     def __repr__(self):
-        return 'FilmsQuerySet: {0} objects'.format(str(len(self.objects)))
+        return 'FilmsQuerySet: {0} objects'.format(str(len(self)))
+
+    def __len__(self):
+        return self.count()
