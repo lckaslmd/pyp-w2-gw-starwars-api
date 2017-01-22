@@ -95,13 +95,16 @@ class BaseQuerySet(object):
 
     next = __next__
 
+    def __len__(self):
+        return self.count()
+
     def count(self):
         """
         Returns the total count of objects of current model.
         If the counter is not persisted as a QuerySet instance attr,
         a new request is performed to the API in order to get it.
         """
-        return len([resource for resource in self])
+        return len([ resource for resource in self ])
 
 
 class PeopleQuerySet(BaseQuerySet, OperationsForPeople):
@@ -112,9 +115,6 @@ class PeopleQuerySet(BaseQuerySet, OperationsForPeople):
 
     def __repr__(self):
         return 'PeopleQuerySet: {0} objects'.format(str(len(self)))
-        
-    def __len__(self):
-        return self.count()        
 
 
 class FilmsQuerySet(BaseQuerySet, OperationsForFilms):
@@ -125,6 +125,3 @@ class FilmsQuerySet(BaseQuerySet, OperationsForFilms):
 
     def __repr__(self):
         return 'FilmsQuerySet: {0} objects'.format(str(len(self)))
-
-    def __len__(self):
-        return self.count()
