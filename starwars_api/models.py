@@ -3,18 +3,18 @@ from starwars_api.exceptions import SWAPIClientError
 
 api_client = SWAPIClient()
 
+class OperationsForAll(object):
 
-class AbstractResourcesOperations(object):
-    
     @classmethod
     def go_to_next(cls, instance):
-        if isinstance(instance, cls):
-            while instance.counter < instance.max_resources():
-                instance.counter += 1
-                return cls.resource_class.get(instance.counter)
+        """ Assumes instance is a QuerySet for a resource category """
+        if isinstance(instance, cls) and instance.counter < instance.max_resources():
+            instance.counter += 1
+            return cls.resource_class.get(instance.counter)
         raise StopIteration()
 
-class OperationsForPeople(AbstractResourcesOperations):
+class OperationsForPeople(OperationsForAll):
+
     @classmethod
     def get_resource_from_api(cls, resource_id):
         return api_client.get_people(resource_id)
@@ -27,7 +27,8 @@ class OperationsForPeople(AbstractResourcesOperations):
     def max_resources(cls):
         return api_client.get_people()['count']
 
-class OperationsForFilms(AbstractResourcesOperations):
+class OperationsForFilms(OperationsForAll):
+
     @classmethod    
     def get_resource_from_api(cls, resource_id):
         return api_client.get_films(resource_id)
@@ -79,6 +80,7 @@ class People(BaseModel, OperationsForPeople):
 
 
 class Films(BaseModel, OperationsForFilms):
+
     def __init__(self, json_data):
         super(Films, self).__init__(json_data)
         
