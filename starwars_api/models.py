@@ -11,15 +11,26 @@ class BaseModel(object):
         Dynamically assign all attributes in `json_data` as instance
         attributes of the Model.
         """
-        pass
+        
+        for key, value in json_data.items():
+            if key is 'results':
+                for r_key, r_value in value[0].items():
+                    setattr(self, r_key, r_value)
+            setattr(self, key, value)
 
+        
     @classmethod
     def get(cls, resource_id):
         """
         Returns an object of current Model requesting data to SWAPI using
         the api_client.
         """
-        pass
+        if cls.RESOURCE_NAME is 'people':
+            return People(api_client.get_people(resource_id))
+        elif cls.RESOURCE_NAME is 'films':
+            return Films(api_client.get_films(resource_id))
+        else:
+            return None
 
     @classmethod
     def all(cls):
@@ -28,7 +39,12 @@ class BaseModel(object):
         later in charge of performing requests to SWAPI for each of the
         pages while looping.
         """
-        pass
+        if cls.RESOURCE_NAME is 'people':
+            return PeopleQuerySet()
+        elif cls.RESOURCE_NAME is 'films':
+            return FilmsQuerySet()
+        else:
+            return None
 
 
 class People(BaseModel):
@@ -55,17 +71,29 @@ class Films(BaseModel):
 class BaseQuerySet(object):
 
     def __init__(self):
-        pass
-
+        self.current = None
+        self.counter = 1
+            
     def __iter__(self):
-        pass
+        self.counter = 1
+        if isinstance(self, PeopleQuerySet):
+            self.current = People(api_client.get_people(self.counter))
+        elif isinstance(self, FilmsQuerySet):
+            self.current = Films(api_client.get_films(self.counter))
+        return self
 
     def __next__(self):
-        """
-        Must handle requests to next pages in SWAPI when objects in the current
-        page were all consumed.
-        """
-        pass
+        if isinstance(self, PeopleQuerySet):
+            while self.counter <= api_client.get_people()['count']:
+                self.current = People.get(self.counter)
+                self.counter += 1
+                return self.current
+        elif isinstance(self, FilmsQuerySet):
+            while self.counter <= api_client.get_films()['count']:
+                self.current = Films.get(self.counter)
+                self.counter += 1
+                return self.current
+        raise StopIteration()
 
     next = __next__
 
@@ -75,7 +103,7 @@ class BaseQuerySet(object):
         If the counter is not persisted as a QuerySet instance attr,
         a new request is performed to the API in order to get it.
         """
-        pass
+        return len([resource for resource in self])
 
 
 class PeopleQuerySet(BaseQuerySet):
